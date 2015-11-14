@@ -1,0 +1,27 @@
+README
+
+created by: Nick Usoff
+created on: 11-14-15
+
+
+The idea - create a unique song based on a sentiment number
+
+Decisions that the algorithm takes:
+
+	- Chord based or single notes
+	- key
+	- register
+	- ...
+
+
+Sounds and their corresponding sentiment value
+
+
+MUSIC SENTIMENT FACTORS
+
+dissonance 
+major vs. minor
+chord progressions
+
+
+

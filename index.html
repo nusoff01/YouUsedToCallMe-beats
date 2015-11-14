@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html xmlns = "http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<!-- polyfill -->
+	<script src="inc/shim/Base64.js" type="text/javascript"></script>
+	<script src="inc/shim/Base64binary.js" type="text/javascript"></script>
+	<script src="inc/shim/WebAudioAPI.js" type="text/javascript"></script>
+	<!-- midi.js package -->
+	<script src="js/midi/audioDetect.js" type="text/javascript"></script>
+	<script src="js/midi/gm.js" type="text/javascript"></script>
+	<script src="js/midi/loader.js" type="text/javascript"></script>
+	<script src="js/midi/plugin.audiotag.js" type="text/javascript"></script>
+	<script src="js/midi/plugin.webaudio.js" type="text/javascript"></script>
+	<script src="js/midi/plugin.webmidi.js" type="text/javascript"></script>
+	<!-- utils -->
+	<script src="js/util/dom_request_xhr.js" type="text/javascript"></script>
+	<script src="js/util/dom_request_script.js" type="text/javascript"></script>
+</head>
+<body>
+<script type="text/javascript">
+
+window.onload = function () {
+	MIDI.loadPlugin({
+		soundfontUrl: "./soundfont/",
+		instrument: "acoustic_grand_piano",
+		onprogress: function(state, progress) {
+			console.log(state, progress);
+		},
+		onsuccess: function() {
+			var delay = 0; // play one note every quarter second
+			var note = 50; // the MIDI note
+			var velocity = 127; // how hard the note hits
+			// play the note
+			MIDI.setVolume(0, 127);
+
+			sentiment = "negative"
+
+
+			/* low sentiment patterns: */
+			negative_patterns = [ 
+				[3, .75, .25],
+			 	[2, 2],
+			 	[.5, 1.5, 2]
+			 ]
+
+			positive_patterns = [
+				[.5, .5, .5, .5, .5, .5, .5, .5],
+				[.25, .25, .25, .25, .25, .25, .5, 2],
+				[1, 1, 1, 1],
+				[.5, 1, .5, 1]
+			]
+
+			/* low sentiment intervals: */
+
+			negative_key_pats = {
+				3: {
+					0: [[0, 1], [1, 3], [5]], 
+					1: [[0, 3, 5, 11], [0, 3, 5, 11], [0, 6]],
+					2: [[0, 3], [0, 4], [1, 2]],
+					length: 3
+				   },
+				2: {
+					0: [[1, 4], [1, 11]],
+					length: 1
+				   }
+			}
+			//negative_intervals = [1, 3, 5, 11]
+
+			positive_key_pats = {
+				4: {
+					0: [[0], [0, 4], [0, 4, 7], [0, 4, 7, 12]],
+					1: [[0, 4], [0, 5], [0, 2], [0, 4]],
+					length: 2
+				   },
+				8: {
+					0: [[0], [2], [4], [5], [7], [9], [11], [12]],
+					1: [[0], [4], [5], [12], [0, 5], [0, 5], [0, 12], [0, 4, 5, 12]],
+					length: 2
+				   } 
+			}
+
+			//positive_intervals = [2, 4, 12]
+
+
+
+			/* createNotes
+ 			 *	creates a sound for notes (an array of pitches)
+ 			 *	returns the start time plus the duration of the note
+ 			 */ 
+
+			function createNotes(note, velocity, delay, duration, curr_time, key){
+				for(var i = 0; i < note.length; i++){
+					MIDI.noteOn(0, note[i] + key, velocity, delay);
+					MIDI.noteOff(0, note[i] + key, delay + duration);
+				}
+				return curr_time + duration
+			}
+
+			/* createMeasure
+			 *	Takes an array of note, duration pairs and
+			 * 	constructs Notes out of them. The duration of the notes must
+			 *	sum to the length of the measure
+			 */
+
+			function createMeasure(note_dur, curr_delay, key){
+				tot_delay = curr_delay
+				for(var i = 0; i < note_dur.length; i++){
+					curr_note = note_dur[i]
+					curr_note.velocity ? velocity = curr_note.velocity : velocity = 127					
+					tot_delay = createNotes(curr_note.note, velocity, tot_delay, curr_note.dur, tot_delay, key)
+				}
+				return tot_delay
+			}
+
+
+			/* pickAPattern
+			 *	uses RNG to choose a measure pattern
+			 *  TODO - once intrameasure structure becomes a factor, this needs to be updated
+			 */
+
+			function pickAPattern(sentiment) {
+				if(sentiment == "negative"){
+					measure = Math.floor(Math.random() * negative_patterns.length)
+					return negative_patterns[measure]
+				} else {
+					measure = Math.floor(Math.random() * positive_patterns.length)
+					return positive_patterns[measure]
+				}
+			}
+
+
+			/* pickPitches
+			 *	uses RNG to choose pitches, given a pattern array, returns a note, dur pair array
+			 *  TODO - actually make this meaningful
+			 */
+
+			 function pickPitches(sentiment, pattern, key){
+
+			 	note_dur = []
+			 	if(sentiment == "negative"){
+			 		pos_pats = negative_key_pats[pattern.length]
+
+			 		console.log('pos_pats: ')
+			 		console.log(pos_pats)
+			 		x = pos_pats
+
+			 		var rand_num = Math.floor(Math.random() * pos_pats.length)
+			 		console.log("rand_num: " + rand_num)
+				 	pitch_pat = pos_pats[rand_num]
+
+
+				 	console.log("pitch_pat: ")
+				 	console.log(pitch_pat)
+				 	for(var i = 0; i < pattern.length; i++){
+				 		note_dur[i] = {note: pitch_pat[i], dur: pattern[i]}
+				 	}
+				} else {
+					for(var i = 0; i < pattern.length; i++){
+						console.log("pattern.length: " + pattern.length)
+						pos_pats = positive_key_pats[pattern.length]
+					 	pitch_pat = pos_pats[Math.floor(Math.random() * pos_pats.length)]
+					 	for(var i = 0; i < pattern.length; i++){
+					 		note_dur[i] = {note: pitch_pat[i], dur: pattern[i]}
+					 	}
+				 	}
+				}
+			 	// console.log("note_dur: ")
+			 	// console.log(note_dur)
+			 	return note_dur
+			 } 
+
+
+
+			note_dur = [
+				{note: [50, 54], dur: 1},
+				{note: [50, 54], dur: .5},
+				{note: [52, 55], dur: .5},
+				{note: [50, 54], dur: .5},
+				{note: [48, 52], dur: .5},
+				{note: [50, 54], dur: 1}
+			]
+			//createMeasure
+			
+			tot_time = 0
+			key = 44
+			for(var i = 0; i < 10; i++){
+				//tot_time = createMeasure(note_dur, tot_time)
+				if(i % 2 == 0){
+					key -= 1
+				}
+				if (i % 6 == 0){
+					key = key + 5
+				}
+				pattern = pickAPattern("negative");
+				note_dur = pickPitches("negative", pattern, key);
+				console.log("note_dur after call to pickPitches: ")
+				console.log(note_dur)
+				tot_time = createMeasure(note_dur, tot_time, key)
+				//console.log(pickAPattern("negative"))
+			}
+
+		}
+	});
+};
+
+</script>
+</body>
+</html>
