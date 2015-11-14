@@ -34,7 +34,13 @@ window.onload = function () {
 			// play the note
 			MIDI.setVolume(0, 127);
 
-			sentiment = "negative"
+			//randomizing negative/positive for the time being
+
+			if(Math.random() < .5){
+				sentiment = "negative"
+			}
+
+			sentiment = "positive"
 
 
 			/* low sentiment patterns: */
@@ -45,7 +51,7 @@ window.onload = function () {
 			 ]
 
 			positive_patterns = [
-				[.5, .5, .5, .5, .5, .5, .5, .5],
+				[.125, .125, .125, .125, .125, .125, .75, 2.5],
 				[.25, .25, .25, .25, .25, .25, .5, 2],
 				[1, 1, 1, 1],
 				[.5, 1, .5, 1]
@@ -107,7 +113,7 @@ window.onload = function () {
 				tot_delay = curr_delay
 				for(var i = 0; i < note_dur.length; i++){
 					curr_note = note_dur[i]
-					curr_note.velocity ? velocity = curr_note.velocity : velocity = 127					
+					curr_note.velocity ? velocity = curr_note.velocity : velocity = 65				
 					tot_delay = createNotes(curr_note.note, velocity, tot_delay, curr_note.dur, tot_delay, key)
 				}
 				return tot_delay
@@ -141,23 +147,16 @@ window.onload = function () {
 			 	if(sentiment == "negative"){
 			 		pos_pats = negative_key_pats[pattern.length]
 
-			 		console.log('pos_pats: ')
-			 		console.log(pos_pats)
 			 		x = pos_pats
 
 			 		var rand_num = Math.floor(Math.random() * pos_pats.length)
-			 		console.log("rand_num: " + rand_num)
 				 	pitch_pat = pos_pats[rand_num]
 
-
-				 	console.log("pitch_pat: ")
-				 	console.log(pitch_pat)
 				 	for(var i = 0; i < pattern.length; i++){
 				 		note_dur[i] = {note: pitch_pat[i], dur: pattern[i]}
 				 	}
 				} else {
 					for(var i = 0; i < pattern.length; i++){
-						console.log("pattern.length: " + pattern.length)
 						pos_pats = positive_key_pats[pattern.length]
 					 	pitch_pat = pos_pats[Math.floor(Math.random() * pos_pats.length)]
 					 	for(var i = 0; i < pattern.length; i++){
@@ -170,32 +169,42 @@ window.onload = function () {
 			 	return note_dur
 			 } 
 
-
-
-			note_dur = [
-				{note: [50, 54], dur: 1},
-				{note: [50, 54], dur: .5},
-				{note: [52, 55], dur: .5},
-				{note: [50, 54], dur: .5},
-				{note: [48, 52], dur: .5},
-				{note: [50, 54], dur: 1}
-			]
-			//createMeasure
 			
+			if(sentiment == "positive"){
+				key = Math.floor(Math.random() * 10) + 50
+			} else {
+				key = Math.floor(Math.random() * 10) + 40
+			}
+
 			tot_time = 0
 			key = 44
 			for(var i = 0; i < 10; i++){
 				//tot_time = createMeasure(note_dur, tot_time)
-				if(i % 2 == 0){
-					key -= 1
+				if(sentiment == "negative"){
+					if(i % 2 == 0){
+						key -= 3
+					}
+					if (i % 6 == 0){
+						key = key + 11
+					}
+				} else {
+					if(i % 2 == 0){
+						key += 2
+					}
+					
 				}
-				if (i % 6 == 0){
-					key = key + 5
-				}
-				pattern = pickAPattern("negative");
-				note_dur = pickPitches("negative", pattern, key);
+				pattern = pickAPattern(sentiment);
+				note_dur = pickPitches(sentiment, pattern, key);
 				console.log("note_dur after call to pickPitches: ")
 				console.log(note_dur)
+
+				var base_note_dur = [
+					{note: [0, 4, 7, 12], dur: 2},
+					{note: [0, 12], dur: 1},
+					{note: [0, 12], dur: 1}
+				]
+
+				createMeasure(base_note_dur, tot_time, key)
 				tot_time = createMeasure(note_dur, tot_time, key)
 				//console.log(pickAPattern("negative"))
 			}
