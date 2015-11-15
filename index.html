@@ -18,6 +18,8 @@
 	<script src="js/util/dom_request_script.js" type="text/javascript"></script>
 </head>
 <body>
+	<h4>sentiment_val: .1, tempo: 100</h4>
+	<button onclick='playSound(.1, 100)'>play music</button>
 <script type="text/javascript">
 
 
@@ -34,7 +36,10 @@ function abs_sqrt(num){
 }
 
 
-window.onload = function () {
+//window.onload = playSound()
+
+
+function playSound(sentiment_val, tempo) {
 	MIDI.loadPlugin({
 		soundfontUrl: "./soundfont/",
 		instrument: "acoustic_grand_piano",
@@ -45,11 +50,11 @@ window.onload = function () {
 			var delay = 0; // play one note every quarter second
 			var note = 50; // the MIDI note
 			var velocity = 127; // how hard the note hits
-			var tempo = 90
+			// var tempo = 90
 			// play the note
 			MIDI.setVolume(0, 127);
 
-			sentiment_val = .8
+			// sentiment_val = .01
 			if(sentiment_val >= 0){
 				sentiment = "positive"
 			} else {
@@ -329,13 +334,6 @@ window.onload = function () {
 			// order to account for a non-absolute positive or negative. 
 
 			// NOTE: Right now, using a sqrt function to amplify the effect of the sentiment_value
-
-
-			// input: -.01
-			// cutoff -.1 * .5 + .5 = -.05 + .5 = .45 -> anything above should be negative, everything below should be positive
-
-			// input: .01
-			// cutoff .1 * .5 + .5 = .6 Everything below should be positive
 			
 			function pick_sentiment () {
 				var cutoff = abs_sqrt(sentiment_val) * .5 + .5
@@ -422,10 +420,10 @@ window.onload = function () {
 				]
 
 				var base_note_dur_neutral = [
-					{note: [-12], dur: 1},
-					{note: [-12], dur: 1},
-					{note: [-12], dur: 1},
-					{note: [-12], dur: 1}
+					{note: [-24, -12], dur: 1},
+					{note: [-24, -12], dur: 1},
+					{note: [-24, -12], dur: 1},
+					{note: [-24, -12], dur: 1}
 				]
 				console.log("velocity value: " + ((-sentiment_val * 30) + 40))
 
@@ -439,7 +437,6 @@ window.onload = function () {
 				}
 				tot_time = createMeasure(note_dur, tot_time, key, {})
 			}
-
 		}
 	});
 };
