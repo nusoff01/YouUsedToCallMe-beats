@@ -31,17 +31,18 @@ window.onload = function () {
 			var delay = 0; // play one note every quarter second
 			var note = 50; // the MIDI note
 			var velocity = 127; // how hard the note hits
+			var tempo = 90
 			// play the note
 			MIDI.setVolume(0, 127);
 
 			//randomizing negative/positive for the time being
 
-			if(Math.random() < .5){
-				sentiment = "negative"
-			}
-
+			// if(Math.random() < .5){
+			// 	sentiment = "negative"
+			// } else {
+			// 	sentiment = "positive"
+			// }
 			sentiment = "positive"
-
 
 			/* low sentiment patterns: */
 			negative_patterns = [ 
@@ -51,10 +52,10 @@ window.onload = function () {
 			 ]
 
 			positive_patterns = [
-				[.125, .125, .125, .125, .125, .125, .75, 2.5],
+				[.125, .125, .125, .625, .125, .125, .75, 2],
 				[.25, .25, .25, .25, .25, .25, .5, 2],
 				[1, 1, 1, 1],
-				[.5, 1, .5, 1]
+				[.5, 1, .5, 2]
 			]
 
 			/* low sentiment intervals: */
@@ -85,10 +86,98 @@ window.onload = function () {
 					length: 2
 				   } 
 			}
+			
+
+			//BASE PARTS: Four measures of repeating 
+
+			//Negative base measures
+			neg_base = [ 
+				[{ note: [-12], dur: 1.33},
+				 { note: [-10], dur: 1.34},
+				 { note: [-13], dur: 1.33}],
+				[{ note: [-7], dur: 1},
+				 { note: [-7], dur: .5},
+				 { note: [-7], dur: .5},
+				 { note: [-13], dur: 1},
+				 { note: [-12], dur: 1}],
+				[{ note: [-5], dur: 1},
+				 { note: [-7], dur: 1.5},
+				 { note: [-11], dur: .5},
+				 { note: [-12], dur: 1}],
+				[{ note: [-7], dur: 1},
+				 { note: [-7], dur: .5},
+				 { note: [-6], dur: .5},
+				 { note: [-8], dur: .25},
+				 { note: [-7], dur: .75},
+				 { note: [-7], dur: 1}
+				],
+				[{ note: [-13], dur: 1},
+				 { note: [-13], dur: 1},
+				 { note: [-13], dur: 1},
+				 { note: [-13], dur: 1},
+				]
+			]
+
+			pos_base = [
+				[
+					{note: [0, 4, 7, 12], dur: 2},
+					{note: [0, 12], dur: 1},
+					{note: [0, 12], dur: 1}
+				],
+				[
+					{note: [0, 7], dur: .25},
+					{note: [0, 7], dur: .25},
+					{note: [0, 7], dur: .25},
+					{note: [0, 7], dur: .25},
+					{note: [0, 4, 7], dur: 1},
+					{note: [0, 4, 7], dur: 1},
+					{note: [0, 7], dur: .5},
+					{note: [4, 7], dur: .25},
+					{note: [4, 7], dur: .25},
+				]
+			]
+
+			for(var i = 0; i < pos_base.length; i++){
+				for(var j = 0; j < pos_base[i].length; j++){
+					for(var k = 0; k < pos_base[i][j].note.length; k++){
+						pos_base[i][j].note[k] -= 12
+					}
+				}
+			}
+
 
 			//positive_intervals = [2, 4, 12]
 
+			//neutral transforms to notes which affects particular notes
+			//rules: 
+			// - duration must not exceed the durartion of the given note
+			// - must not affect the sentiment
+			// - last note must be greater than .5
 
+			function transforms(note_dur, type_trans){
+
+				if(type_trans == "bravado"){
+					// 30% chance of adding pseudo bravado to the last note of a measure
+
+					if((Math.random() * 10) < 1.5){
+						console.log("BRAVADO PASSED")
+						var i = note_dur.length - 1
+						var i_dur = note_dur[i].dur
+						var i_note = note_dur[i].note
+						var i_diff = 1
+
+						terminator = note_dur.length + 4
+						for(;i < terminator; i++){
+							note_dur[i] = {note: note + i_diff, dur: .125 }
+							i_diff = 0 - i_diff
+						}
+						note_dur[i] = {note: i_note, dur: i_dur - .625}
+					} else {
+						console.log("BRAVADO FAILED")
+					}
+				}
+				return note_dur
+			}
 
 			/* createNotes
  			 *	creates a sound for notes (an array of pitches)
@@ -96,11 +185,12 @@ window.onload = function () {
  			 */ 
 
 			function createNotes(note, velocity, delay, duration, curr_time, key){
+				real_duration = 1 / (tempo / 60) * duration
 				for(var i = 0; i < note.length; i++){
 					MIDI.noteOn(0, note[i] + key, velocity, delay);
-					MIDI.noteOff(0, note[i] + key, delay + duration);
+					MIDI.noteOff(0, note[i] + key, delay + real_duration);
 				}
-				return curr_time + duration
+				return curr_time + real_duration
 			}
 
 			/* createMeasure
@@ -111,6 +201,14 @@ window.onload = function () {
 
 			function createMeasure(note_dur, curr_delay, key){
 				tot_delay = curr_delay
+				console.log("note_dur in createMeasure")
+				console.log(note_dur)
+
+				if(note_dur[note_dur.length - 1].dur >= 1){
+					note_dur = transforms(note_dur, "bravado")
+				}
+
+
 				for(var i = 0; i < note_dur.length; i++){
 					curr_note = note_dur[i]
 					curr_note.velocity ? velocity = curr_note.velocity : velocity = 65				
@@ -141,7 +239,7 @@ window.onload = function () {
 			 *  TODO - actually make this meaningful
 			 */
 
-			 function pickPitches(sentiment, pattern, key){
+			function pickPitches(sentiment, pattern, key){
 
 			 	note_dur = []
 			 	if(sentiment == "negative"){
@@ -171,40 +269,91 @@ window.onload = function () {
 
 			
 			if(sentiment == "positive"){
-				key = Math.floor(Math.random() * 10) + 50
+				var key = Math.floor(Math.floor(Math.random() * 10)) + 60
 			} else {
-				key = Math.floor(Math.random() * 10) + 40
+				var key = Math.floor(Math.floor(Math.random() * 10)) + 40
 			}
 
+
+			// Key Changes
+			negative_keychanges = [
+				[
+				 	{pitch: 0, dur: 2},
+				 	{pitch: 2, dur: 2},
+				 	{pitch: -2, dur: 2}
+				]
+			]
+
+			positive_keychanges = [
+				[
+					{pitch: 2, dur: 2},
+					{pitch: 7, dur: 2},
+					{pitch: 0, dur: 4}
+				]
+			]
+
+
 			tot_time = 0
-			key = 44
+
+			function choose_key_change(sentiment){
+				if(sentiment == "negative")
+					return negative_keychanges[Math.floor(Math.random() * negative_keychanges.length)]
+				return positive_keychanges[Math.floor(Math.random() * positive_keychanges.length)]
+			}
+
+			key_change = choose_key_change(sentiment)
+			key_counter = 0
+			key_ind = 0
+			var orig_key = key 
+			console.log("orig_key: " + orig_key)
+
 			for(var i = 0; i < 10; i++){
 				//tot_time = createMeasure(note_dur, tot_time)
-				if(sentiment == "negative"){
-					if(i % 2 == 0){
-						key -= 3
-					}
-					if (i % 6 == 0){
-						key = key + 11
-					}
+
+				console.log("KEY_COUNTER: " + key_counter)
+				console.log("KEY_IND: " + key_ind)
+				console.log("KEY_CHANGE[KEY_IND].DUR: " + key_change[key_ind].dur)
+				if(key_counter < key_change[key_ind].dur){
+					console.log(key_change[key_ind].pitch)
+					console.log("key before: " + orig_key)
+					key = orig_key + key_change[key_ind].pitch
+					console.log("key after: " + key)
+					key_counter++
+				} else if(key_ind < key_change.length - 1){
+					key_counter = 0
+					key_ind += 1
+					key = orig_key + key_change[key_ind].pitch
 				} else {
-					if(i % 2 == 0){
-						key += 2
-					}
-					
+					key_change = choose_key_change(sentiment)
+					key_counter = 0
+					key_ind = 0
 				}
+
+				console.log("key: " + key)
+
 				pattern = pickAPattern(sentiment);
 				note_dur = pickPitches(sentiment, pattern, key);
 				console.log("note_dur after call to pickPitches: ")
 				console.log(note_dur)
 
-				var base_note_dur = [
+				var base_note_dur_pos = [
 					{note: [0, 4, 7, 12], dur: 2},
 					{note: [0, 12], dur: 1},
 					{note: [0, 12], dur: 1}
 				]
-
-				createMeasure(base_note_dur, tot_time, key)
+				var base_note_dur_neg = [
+					{note: [-7], dur: 1},
+					{note: [-7], dur: .5},
+					{note: [-7], dur: .5},
+					{note: [-13], dur: 1},
+					{note: [-12], dur: 1},
+				]
+				if(sentiment == "negative"){
+					createMeasure(pos_base[Math.floor(i % 2 )], tot_time, key)
+				} else {
+					createMeasure(pos_base[ Math.floor(i % 2)], tot_time, key)
+				}
+				// createMeasure(base_note_dur, tot_time, key)
 				tot_time = createMeasure(note_dur, tot_time, key)
 				//console.log(pickAPattern("negative"))
 			}
